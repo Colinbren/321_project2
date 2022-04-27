@@ -53,7 +53,7 @@ private ArrayList<Instruction> lookup;
 		Instruction ands = new Instruction("1110101000", "ANDS", Type.R);
 		lookup.add(ands);
 		
-		Instruction b = new Instruction("000101", "B", Type.R);
+		Instruction b = new Instruction("000101", "B", Type.B);
 		lookup.add(b);
 		
 		Instruction bl = new Instruction("100101", "BL", Type.B);
@@ -202,7 +202,6 @@ private ArrayList<Instruction> lookup;
 		{
 			Instruction inst = lookup.get(i);
 			String op = inst.getOpcode();
-			String temp = bytes.substring(0, op.length());
 			if(op.equals(bytes.substring(0, op.length())))
 			{
 				return lookup.get(i);
@@ -252,14 +251,20 @@ private ArrayList<Instruction> lookup;
 		 * Include a conditional for LSL and RSL, look into how the shift
 		 * amount is stored in the emulation
 		 */
-		if(Shamt == 0)
+		if(inst.getLeg().equalsIgnoreCase("BR"))
+		{
+			temp = inst.getLeg() + " X" + Rn;
+			System.out.println(temp);
+		}
+		else if(Shamt == 0)
 		{
 			temp = inst.getLeg() + " X" + Rd + " X" + Rn + " X" + Rm;
 			System.out.println(temp);
 		}
-		else
+		else if(Shamt > 0)
 		{
-			
+			temp = inst.getLeg() + " X" + Rd + " X" + Rn + " #" + Shamt;
+			System.out.println(temp);
 		}
 		
 		return temp;
@@ -267,7 +272,7 @@ private ArrayList<Instruction> lookup;
 	
 	private String i_type(Instruction inst, String byteString)
 	{
-		String temp = "", substring;
+		String temp = "";
 		int Rd = Integer.parseInt(byteString.substring(27), 2);
 		int Rn = Integer.parseInt(byteString.substring(22, 27), 2);
 		int Imm = Integer.parseInt(byteString.substring(11, 22), 2);
@@ -292,10 +297,53 @@ private ArrayList<Instruction> lookup;
 			labelCounter++;
 		}
 		
-		temp += inst.getLeg() + " X" + Rt + " " 
-				+ labelList.get(instructionLine);
-		System.out.println(temp);
+		if(inst.getLeg().equals("B.")) 
+		{
+			temp += inst.getLeg() + getExtension(Rt) 
+				+ " " + labelList.get(instructionLine);
+			System.out.println(temp);
+		}
+		else {
+			temp += inst.getLeg() + " X" + Rt + " " 
+					+ labelList.get(instructionLine);
+			System.out.println(temp);
+		}
 		return temp;
+	}
+	
+	private String getExtension(int extend)
+	{
+		if(extend == 0) {
+			return "EQ";
+		} else if(extend == 1) {
+			return "NE";
+		} else if(extend == 2) {
+			return "HS";
+		} else if(extend == 3) {
+			return "LO";
+		} else if(extend == 4) {
+			return "MI";
+		} else if(extend == 5) {
+			return "PL";
+		} else if(extend == 6) {
+			return "VS";
+		} else if(extend == 7) {
+			return "VC";
+		} else if(extend == 8) {
+			return "HI";
+		} else if(extend == 9) {
+			return "LS";
+		} else if(extend == 10) {
+			return "GE";
+		} else if(extend == 11) {
+			return "LT";
+		} else if(extend == 12) {
+			return "GT";
+		} else if(extend == 13) {
+			return "LE";
+		} else {
+			return null;
+		}
 	}
 	
 	private String b_type(Instruction inst, String byteString)
@@ -311,8 +359,7 @@ private ArrayList<Instruction> lookup;
 		temp += inst.getLeg() + " " + labelList.get(instructionLine);
 		System.out.println(temp);
 		return temp;
-	}
-	
+	}	
 	
 }
 
