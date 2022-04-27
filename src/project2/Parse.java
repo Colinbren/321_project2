@@ -5,7 +5,7 @@ public class Parse {
 
 	public static void main(String[] args) throws FileNotFoundException {
 		String inputFile;
-		Decoder decode = new Decoder();
+		Decoder dec = new Decoder();
 		try {
 		inputFile = args[0];
 		}
@@ -27,16 +27,14 @@ public class Parse {
 				binary += String.format("%"+8+"s",Integer.toBinaryString(byte_read))
 					.replaceAll(" ", "0");
 				
-				byte_read += inputStream.read();
+				byte_read = inputStream.read();
 				binary += String.format("%"+8+"s",Integer.toBinaryString(byte_read))
 					.replaceAll(" ", "0");
 				
 				byte_read = inputStream.read();
 				binary += String.format("%"+8+"s",Integer.toBinaryString(byte_read))
 					.replaceAll(" ", "0");
-				inputStream.skip(4);
-				decode.getInstuction(binary);
-				break;
+				dec.decode(binary);
 				
 			}
 			

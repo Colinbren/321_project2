@@ -4,6 +4,7 @@ public class Instruction {
 
 private String opcode;
 	
+	//Instuction string 
 	private String leg;
 	
 	private Type type;

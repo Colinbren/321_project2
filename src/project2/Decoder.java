@@ -1,14 +1,33 @@
 package project2;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 
 public class Decoder {
 
+/**
+ * BranchCounter is used to give each label a unique name, once you auto
+ * generate the label "label1", the next generated label will be "lable2"
+ * 
+ * Instruction line keeps track of the current instruction line. Right
+ * now the only application of this is to make sure that if a branch is
+ * trying to jump to a label that already exists, it has the proper label 
+ * name instead of generating a new one.
+ */
+private int labelCounter, instructionLine;
+
+/**
+ * The branchList the address of the jump and the associated label name
+ */
+private HashMap<Integer, String> labelList;
 private ArrayList<Instruction> lookup;
 	
 	public Decoder()
 	{
 		lookup = new ArrayList<>();
+		labelList = new HashMap<Integer, String>();
+		labelCounter = 1;
+		instructionLine = 0;
 		
 		Instruction add = new Instruction("10001011000", "ADD", Type.R);
 		lookup.add(add);
@@ -48,6 +67,9 @@ private ArrayList<Instruction> lookup;
 		
 		Instruction cbz = new Instruction("10110100", "CBZ", Type.CB);
 		lookup.add(cbz);
+		
+		Instruction b_cond = new Instruction("01010100", "B.", Type.CB);
+		lookup.add(b_cond);
 		
 		Instruction dump = new Instruction("11111111110", "DUMP", Type.R);
 		lookup.add(dump);
@@ -189,14 +211,108 @@ private ArrayList<Instruction> lookup;
 		return null;
 	}
 	
-	public String decodeRType(String bytes)
+	public String decode(String bytes)
 	{
 		String decode = "";
 		
-		bytes = bytes.substring(10); 
-		
 		Instruction inst = getInstuction(bytes);
+		if(inst == null) {
+			return "";
+		}
+		
+		instructionLine++;
+		if(inst.getType() == Type.R)
+		{
+			r_type(inst, bytes);
+		}
+		else if(inst.getType() == Type.I)
+		{
+			i_type(inst, bytes);
+		}
+		else if(inst.getType() == Type.CB)
+		{
+			cb_type(inst, bytes);
+		}
+		else if(inst.getType() == Type.B)
+		{
+			b_type(inst, bytes);
+		}
 		return decode;
 	}
+	
+	private String r_type(Instruction inst, String byteString)
+	{
+		String temp = "";
+		int Rd = Integer.parseInt(byteString.substring(27), 2);
+		int Rn = Integer.parseInt(byteString.substring(22, 27), 2);
+		int Shamt = Integer.parseInt(byteString.substring(16, 22), 2);
+		int Rm = Integer.parseInt(byteString.substring(11, 16), 2);
+		
+		/*
+		 * Include a conditional for LSL and RSL, look into how the shift
+		 * amount is stored in the emulation
+		 */
+		if(Shamt == 0)
+		{
+			temp = inst.getLeg() + " X" + Rd + " X" + Rn + " X" + Rm;
+			System.out.println(temp);
+		}
+		else
+		{
+			
+		}
+		
+		return temp;
+	}
+	
+	private String i_type(Instruction inst, String byteString)
+	{
+		String temp = "", substring;
+		int Rd = Integer.parseInt(byteString.substring(27), 2);
+		int Rn = Integer.parseInt(byteString.substring(22, 27), 2);
+		int Imm = Integer.parseInt(byteString.substring(11, 22), 2);
+		
+		
+		temp += inst.getLeg() + " X" + Rd + " X" + Rn + " #" + Imm;
+		System.out.println(temp);
+		
+		
+		return temp;
+	}
+	private String cb_type(Instruction inst, String byteString)
+	{
+		String temp = "";
+		int condBranchAddress = Integer.parseInt(byteString.substring(8, 27), 2);
+		int Rt = Integer.parseInt(byteString.substring(27), 2);
+		
+		if(labelList.get(instructionLine + condBranchAddress) == null)
+		{
+			String l_name = "label" + labelCounter;
+			labelList.put(instructionLine, l_name);
+			labelCounter++;
+		}
+		
+		temp += inst.getLeg() + " X" + Rt + " " 
+				+ labelList.get(instructionLine);
+		System.out.println(temp);
+		return temp;
+	}
+	
+	private String b_type(Instruction inst, String byteString)
+	{
+		String temp = "";
+		int condBranchAddress = Integer.parseInt(byteString.substring(6), 2);
+		if(labelList.get(instructionLine + condBranchAddress) == null)
+		{
+			String l_name = "label" + labelCounter;
+			labelList.put(instructionLine, l_name);
+			labelCounter++;
+		}
+		temp += inst.getLeg() + " " + labelList.get(instructionLine);
+		System.out.println(temp);
+		return temp;
+	}
+	
+	
 }
 
