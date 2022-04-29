@@ -2,6 +2,7 @@ package project2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Decoder {
 
@@ -21,11 +22,13 @@ private int labelCounter, instructionLine;
  */
 private HashMap<Integer, String> labelList;
 private ArrayList<Instruction> lookup;
+private ArrayList <String> instructionList;
 	
 	public Decoder()
 	{
 		lookup = new ArrayList<>();
 		labelList = new HashMap<Integer, String>();
+		instructionList = new ArrayList<>();
 		labelCounter = 1;
 		instructionLine = 0;
 		
@@ -204,7 +207,8 @@ private ArrayList<Instruction> lookup;
 			String op = inst.getOpcode();
 			if(op.equals(bytes.substring(0, op.length())))
 			{
-				return lookup.get(i);
+				Instruction instruction = new Instruction(lookup.get(i));
+				return instruction;
 			}
 		}
 		return null;
@@ -217,25 +221,31 @@ private ArrayList<Instruction> lookup;
 		Instruction inst = getInstuction(bytes);
 		if(inst == null) {
 			return "";
-		}
-		
-		instructionLine++;
+		}	
+		inst.setLine(instructionLine);
 		if(inst.getType() == Type.R)
 		{
-			r_type(inst, bytes);
+			decode = r_type(inst, bytes);
 		}
 		else if(inst.getType() == Type.I)
 		{
-			i_type(inst, bytes);
+			decode = i_type(inst, bytes);
 		}
 		else if(inst.getType() == Type.CB)
 		{
-			cb_type(inst, bytes);
+			decode = cb_type(inst, bytes);
 		}
 		else if(inst.getType() == Type.B)
 		{
-			b_type(inst, bytes);
+			decode = b_type(inst, bytes);
 		}
+		else if(inst.getType() == Type.D)
+		{
+			decode = d_type(inst, bytes);
+		}
+		inst.setDecodedInst(decode);
+		instructionList.add(decode);
+		instructionLine++;
 		return decode;
 	}
 	
@@ -251,20 +261,33 @@ private ArrayList<Instruction> lookup;
 		 * Include a conditional for LSL and RSL, look into how the shift
 		 * amount is stored in the emulation
 		 */
+		if(inst.getLeg().equalsIgnoreCase("DUMP"))
+		{
+			return "DUMP";
+		}
+		else if(inst.getLeg().equalsIgnoreCase("HALT"))
+		{
+			return "HALT";
+		}
+		else if(inst.getLeg().equalsIgnoreCase("PRNT"))
+		{
+			return "PRNT X" + Rd;
+		}
+		else if(inst.getLeg().equalsIgnoreCase("PRNL"))
+		{
+			return "PRNL";
+		}
 		if(inst.getLeg().equalsIgnoreCase("BR"))
 		{
 			temp = inst.getLeg() + " X" + Rn;
-			System.out.println(temp);
 		}
 		else if(Shamt == 0)
 		{
-			temp = inst.getLeg() + " X" + Rd + " X" + Rn + " X" + Rm;
-			System.out.println(temp);
+			temp = inst.getLeg() + " X" + Rd + ", X" + Rn + ", X" + Rm;
 		}
 		else if(Shamt > 0)
 		{
-			temp = inst.getLeg() + " X" + Rd + " X" + Rn + " #" + Shamt;
-			System.out.println(temp);
+			temp = inst.getLeg() + " X" + Rd + ", X" + Rn + ", #" + Shamt;
 		}
 		
 		return temp;
@@ -278,35 +301,39 @@ private ArrayList<Instruction> lookup;
 		int Imm = Integer.parseInt(byteString.substring(11, 22), 2);
 		
 		
-		temp += inst.getLeg() + " X" + Rd + " X" + Rn + " #" + Imm;
-		System.out.println(temp);
-		
-		
+		temp += inst.getLeg() + " X" + Rd + ", X" + Rn + ", #" + Imm;		
 		return temp;
 	}
 	private String cb_type(Instruction inst, String byteString)
 	{
 		String temp = "";
-		int condBranchAddress = Integer.parseInt(byteString.substring(8, 27), 2);
+		int condBranchAddress;
+		if(byteString.substring(8,9).equals("1"))
+		{
+			condBranchAddress = negativeBin(byteString.substring(8, 27));
+		}
+		else
+		{
+			condBranchAddress = Integer.parseInt(byteString.substring(8, 27), 2);
+		}
+		
 		int Rt = Integer.parseInt(byteString.substring(27), 2);
 		
 		if(labelList.get(instructionLine + condBranchAddress) == null)
 		{
-			String l_name = "label" + labelCounter;
-			labelList.put(instructionLine, l_name);
+			String l_name = "label_" + labelCounter;
+			labelList.put(instructionLine + condBranchAddress, l_name);
 			labelCounter++;
 		}
 		
 		if(inst.getLeg().equals("B.")) 
 		{
 			temp += inst.getLeg() + getExtension(Rt) 
-				+ " " + labelList.get(instructionLine);
-			System.out.println(temp);
+				+ " " + labelList.get(instructionLine + condBranchAddress);
 		}
 		else {
-			temp += inst.getLeg() + " X" + Rt + " " 
-					+ labelList.get(instructionLine);
-			System.out.println(temp);
+			temp += inst.getLeg() + " X" + Rt + ", " 
+					+ labelList.get(instructionLine + condBranchAddress);
 		}
 		return temp;
 	}
@@ -349,17 +376,80 @@ private ArrayList<Instruction> lookup;
 	private String b_type(Instruction inst, String byteString)
 	{
 		String temp = "";
-		int condBranchAddress = Integer.parseInt(byteString.substring(6), 2);
+		int condBranchAddress;
+		if(byteString.substring(6,7).equals("1"))
+		{
+			condBranchAddress = negativeBin(byteString.substring(6));
+		}
+		else
+		{
+			condBranchAddress = Integer.parseInt(byteString.substring(6), 2);
+		}
 		if(labelList.get(instructionLine + condBranchAddress) == null)
 		{
-			String l_name = "label" + labelCounter;
-			labelList.put(instructionLine, l_name);
+			String l_name = "label_" + labelCounter;
+			labelList.put(instructionLine + condBranchAddress, l_name);
 			labelCounter++;
 		}
-		temp += inst.getLeg() + " " + labelList.get(instructionLine);
-		System.out.println(temp);
+		temp += inst.getLeg() + " " + labelList.get
+				(instructionLine + condBranchAddress);
 		return temp;
-	}	
+	}
+	private String d_type(Instruction inst, String byteString)
+	{
+		String instruction = "";
+		int Rt = Integer.parseInt(byteString.substring(27), 2);
+		int Rn = Integer.parseInt(byteString.substring(22, 27), 2);
+		int op = Integer.parseInt(byteString.substring(20, 22), 2);
+		int dt_address = Integer.parseInt(byteString.substring(11,20),2);
+		instruction += inst.getLeg() + " X" + Rt + ", [X" +
+				Rn + ", #" + dt_address + "]";
+		return instruction;	
+	}
 	
+	private int negativeBin(String byteString)
+	{
+		int i;
+		String nByteString = "";
+		for(i = 0; i < byteString.length(); i++)
+		{
+			if(byteString.substring(i, i+1).equals("1"))
+			{
+				nByteString += "0";
+			}
+			else
+			{
+				nByteString += "1";
+			}
+		}
+		int negative = (Integer.parseInt(nByteString, 2) + 1) * -1;
+		return negative;
+	}
+	
+	public ArrayList<String> getAssembly()
+	{
+		int pLabels = 0;
+		ArrayList <String> printedAssembly = new ArrayList<>();
+		for(int i = 0; i < instructionList.size() || 
+				pLabels < labelList.size(); i++)
+		{
+			if(i < instructionList.size() && labelList.get(i) == null)
+			{
+				printedAssembly.add(instructionList.get(i));
+			}
+			else if(i < instructionList.size())
+			{
+				printedAssembly.add(labelList.get(i) + ":");
+				printedAssembly.add(instructionList.get(i));
+				pLabels++;
+			}
+			else
+			{
+				printedAssembly.add(labelList.get(i) + ":");
+				pLabels++;
+			}
+		}
+		return printedAssembly;
+	}
 }
 

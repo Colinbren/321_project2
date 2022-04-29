@@ -1,9 +1,11 @@
 package project2;
 import java.io.*;
+import java.util.ArrayList;
 
 public class Parse {
 
 	public static void main(String[] args) throws FileNotFoundException {
+		ArrayList<String> assemblyCode = new ArrayList<>();
 		String inputFile;
 		Decoder dec = new Decoder();
 		try {
@@ -16,7 +18,7 @@ public class Parse {
 		
 		int byte_read = 0;
 		try {
-			InputStream inputStream = new FileInputStream("assignment1.machine");
+			InputStream inputStream = new FileInputStream(inputFile);
 			while(inputStream.available() > 0)
 			{
 				byte_read = inputStream.read();
@@ -41,6 +43,11 @@ public class Parse {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	    assemblyCode = dec.getAssembly();
+		for(int i = 0; i < assemblyCode.size(); i++)
+		{
+			System.out.println(assemblyCode.get(i));
+		}
 	}
-
+	
 }
